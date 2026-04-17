@@ -1,0 +1,443 @@
+// ============================================================
+// SCHEMA.PRISMA — Sistema de Gestión de Clínica
+// Stack: Neon PostgreSQL + Prisma
+// Convenciones:
+//   - Fechas: siempre DateTime @default(now()) → UTC
+//   - Soft-delete: deletedAt DateTime? en entidades sensibles
+//   - Archivos adjuntos: via R2 (URLs + metadata en MedicalRecord)
+//   - AuditLog: cubre todas las mutaciones críticas
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMERACIONES
+// ============================================================
+
+enum RoleName {
+  ADMIN
+  DOCTOR
+  SECRETARY
+  PATIENT
+  PROSPECT
+}
+
+enum PersonStatus {
+  PROSPECT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum AppointmentStatus {
+  RESERVED
+  CONFIRMED
+  ATTENDED
+  CANCELLED_PATIENT
+  CANCELLED_CLINIC
+  NO_SHOW
+}
+
+enum PaymentStatus {
+  NO_PAYMENT
+  PENDING
+  PAID_MP
+  PAID_CASH
+  PAID_TRANSFER
+  PAID_CARD
+  REFUNDED
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum NotificationType {
+  NEW_APPOINTMENT
+  CANCELLATION
+  PAYMENT
+  NO_SHOW
+  AGENDA_BLOCK
+  REFUND
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  SOFT_DELETE
+  RESTORE
+  STATUS_CHANGE
+  PAYMENT_REGISTERED
+  REFUND_ISSUED
+  AGENDA_BLOCKED
+  AGENDA_UNBLOCKED
+}
+
+// ============================================================
+// AUTENTICACIÓN Y ROLES
+// ============================================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  roleId    String
+  active    Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  role          Role           @relation(fields: [roleId], references: [id])
+  doctor        Doctor?
+  secretary     Secretary?
+  person        Person?
+  notifications Notification[]
+  auditLogs     AuditLog[]     @relation("AuditPerformedBy")
+
+  @@index([email])
+  @@index([roleId])
+}
+
+model Role {
+  id   String   @id @default(cuid())
+  name RoleName @unique
+
+  users       User[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id     String @id @default(cuid())
+  action String @unique
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+}
+
+// ============================================================
+// EQUIPO MÉDICO
+// ============================================================
+
+model Doctor {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  licenseNumber String?
+  phone         String?
+  bio           String?
+  avatarUrl     String?
+  deletedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user             User               @relation(fields: [userId], references: [id])
+  specialties      DoctorSpecialty[]
+  schedules        DoctorSchedule[]
+  agendaBlocks     AgendaBlock[]
+  appointments     Appointment[]
+  secretaryDoctors SecretaryDoctor[]
+  medicalRecords   MedicalRecord[]
+
+  @@index([deletedAt])
+}
+
+model Secretary {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  phone     String?
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id])
+  secretaryDoctors SecretaryDoctor[]
+
+  @@index([deletedAt])
+}
+
+model SecretaryDoctor {
+  secretaryId String
+  doctorId    String
+  assignedAt  DateTime @default(now())
+
+  secretary Secretary @relation(fields: [secretaryId], references: [id])
+  doctor    Doctor    @relation(fields: [doctorId], references: [id])
+
+  @@id([secretaryId, doctorId])
+}
+
+model Specialty {
+  id   String @id @default(cuid())
+  name String @unique
+
+  doctors DoctorSpecialty[]
+}
+
+model DoctorSpecialty {
+  doctorId    String
+  specialtyId String
+
+  doctor    Doctor    @relation(fields: [doctorId], references: [id])
+  specialty Specialty @relation(fields: [specialtyId], references: [id])
+
+  @@id([doctorId, specialtyId])
+}
+
+// ============================================================
+// AGENDA DEL DOCTOR
+// ============================================================
+
+model DoctorSchedule {
+  id           String    @id @default(cuid())
+  doctorId     String
+  dayOfWeek    DayOfWeek
+  startTime    String
+  endTime      String
+  slotDuration Int
+  active       Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  doctor       Doctor        @relation(fields: [doctorId], references: [id])
+  appointments Appointment[]
+
+  @@index([doctorId, dayOfWeek])
+}
+
+model AgendaBlock {
+  id        String    @id @default(cuid())
+  doctorId  String
+  date      DateTime
+  startTime String?
+  endTime   String?
+  reason    String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  doctor Doctor @relation(fields: [doctorId], references: [id])
+
+  @@index([doctorId, date])
+}
+
+// ============================================================
+// PERSONAS (PROSPECTOS Y PACIENTES)
+// ============================================================
+
+model Person {
+  id        String       @id @default(cuid())
+  userId    String?      @unique
+  dni       String       @unique
+  firstName String
+  lastName  String
+  phone     String?
+  email     String?
+  birthDate DateTime?
+  status    PersonStatus @default(PROSPECT)
+  notes     String?
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user           User?           @relation(fields: [userId], references: [id])
+  appointments   Appointment[]
+  medicalRecords MedicalRecord[]
+
+  @@index([dni])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+// ============================================================
+// TURNOS
+// ============================================================
+
+model Appointment {
+  id           String            @id @default(cuid())
+  personId     String
+  doctorId     String
+  scheduleId   String?
+  startTime    DateTime
+  endTime      DateTime
+  status       AppointmentStatus @default(RESERVED)
+  cancelReason String?
+  notes        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  person        Person          @relation(fields: [personId], references: [id])
+  doctor        Doctor          @relation(fields: [doctorId], references: [id])
+  schedule      DoctorSchedule? @relation(fields: [scheduleId], references: [id])
+  payment       Payment?
+  medicalRecord MedicalRecord?
+
+  @@index([doctorId, startTime])
+  @@index([personId])
+  @@index([status])
+  @@index([startTime])
+}
+
+// ============================================================
+// PAGOS
+// ============================================================
+
+model Payment {
+  id             String        @id @default(cuid())
+  appointmentId  String        @unique
+  status         PaymentStatus @default(NO_PAYMENT)
+  amount         Decimal       @db.Decimal(10, 2)
+  currency       String        @default("ARS")
+  mpPaymentId    String?
+  mpPreferenceId String?
+  mpRawWebhook   Json?
+  refundedAt     DateTime?
+  refundReason   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+
+  @@index([status])
+  @@index([mpPaymentId])
+}
+
+// ============================================================
+// HISTORIA CLÍNICA + ADJUNTOS (R2)
+// ============================================================
+
+model MedicalRecord {
+  id            String    @id @default(cuid())
+  personId      String
+  doctorId      String
+  appointmentId String?   @unique
+  title         String
+  content       String?
+  deletedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  person      Person       @relation(fields: [personId], references: [id])
+  doctor      Doctor       @relation(fields: [doctorId], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+  attachments Attachment[]
+
+  @@index([personId])
+  @@index([doctorId])
+  @@index([deletedAt])
+}
+
+model Attachment {
+  id              String    @id @default(cuid())
+  medicalRecordId String
+  fileName        String
+  fileKey         String    @unique
+  fileUrl         String
+  mimeType        String
+  sizeBytes       Int
+  deletedAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  medicalRecord MedicalRecord @relation(fields: [medicalRecordId], references: [id])
+
+  @@index([medicalRecordId])
+  @@index([deletedAt])
+}
+
+// ============================================================
+// NOTIFICACIONES INTERNAS
+// ============================================================
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  readAt    DateTime?
+  metadata  Json?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+}
+
+// ============================================================
+// AUDIT LOG
+// ============================================================
+
+model AuditLog {
+  id           String      @id @default(cuid())
+  performedBy  String?
+  entity       String
+  entityId     String
+  action       AuditAction
+  previousData Json?
+  newData      Json?
+  ipAddress    String?
+  userAgent    String?
+
+  createdAt DateTime @default(now())
+
+  user User? @relation("AuditPerformedBy", fields: [performedBy], references: [id])
+
+  @@index([entity, entityId])
+  @@index([performedBy])
+  @@index([createdAt])
+}
+
+// ============================================================
+// CONFIGURACIÓN DE LA CLÍNICA (Singleton)
+// ============================================================
+
+model ClinicConfig {
+  id               String  @id @default(cuid())
+  name             String
+  logoUrl          String?
+  phone            String?
+  email            String?
+  address          String?
+  timezone         String  @default("America/Argentina/Buenos_Aires")
+  currency         String  @default("ARS")
+  twilioNumber     String?
+  twilioAccountSid String?
+  mpPublicKey      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
