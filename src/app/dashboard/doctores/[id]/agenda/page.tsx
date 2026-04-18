@@ -75,8 +75,8 @@ export default function AgendaPage() {
       await upsertSchedule(id, formData)
       const updated = await getDoctorSchedules(id)
       setSchedules(updated)
-    } catch (err: any) {
-      setError(err.message || "Error al guardar")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al guardar")
     } finally {
       setSaving(false)
     }
@@ -87,8 +87,8 @@ export default function AgendaPage() {
     try {
       await deleteSchedule(scheduleId, id)
       setSchedules((prev) => prev.filter((s) => s.id !== scheduleId))
-    } catch (err: any) {
-      setError(err.message || "Error al eliminar")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al eliminar")
     }
   }
 
@@ -116,8 +116,8 @@ export default function AgendaPage() {
           ? `✅ Agenda cerrada. Se cancelaron ${result.cancelledCount} turno(s) automáticamente.`
           : "✅ Agenda cerrada. No había turnos en ese horario."
       )
-    } catch (err: any) {
-      setBlockError(err.message || "Error al cerrar agenda")
+    } catch (err) {
+      setBlockError(err instanceof Error ? err.message : "Error al cerrar agenda")
     } finally {
       setSavingBlock(false)
     }
@@ -128,8 +128,8 @@ export default function AgendaPage() {
     try {
       await deleteAgendaBlock(blockId, id)
       setBlocks((prev) => prev.filter((b) => b.id !== blockId))
-    } catch (err: any) {
-      setBlockError(err.message || "Error al eliminar")
+    } catch (err) {
+      setBlockError(err instanceof Error ? err.message : "Error al eliminar")
     }
   }
 

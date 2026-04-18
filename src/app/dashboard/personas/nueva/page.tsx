@@ -19,8 +19,8 @@ export default function NuevaPersonaPage() {
       const formData = new FormData(e.currentTarget)
       await createPerson(formData)
       router.push("/dashboard/personas")
-    } catch (err: any) {
-      setError(err.message || "Error al crear la persona")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al crear la persona")
       setLoading(false)
     }
   }

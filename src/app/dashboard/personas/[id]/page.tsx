@@ -70,8 +70,8 @@ export default function EditarPersonaPage() {
       const formData = new FormData(e.currentTarget)
       await updatePerson(id, formData)
       router.push("/dashboard/personas")
-    } catch (err: any) {
-      setError(err.message || "Error al actualizar")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al actualizar")
       setLoading(false)
     }
   }
@@ -80,8 +80,8 @@ export default function EditarPersonaPage() {
     try {
       await changePersonStatus(id, status)
       setPersona((prev) => prev ? { ...prev, status } : prev)
-    } catch (err: any) {
-      setError(err.message || "Error al cambiar estado")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al cambiar estado")
     }
   }
 
@@ -90,12 +90,12 @@ export default function EditarPersonaPage() {
     try {
       await deletePerson(id)
       router.push("/dashboard/personas")
-    } catch (err: any) {
-      setError(err.message || "Error al archivar")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al archivar")
     }
   }
 
-  if (loadingData) {
+  if (loadingData || !persona) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-gray-500">Cargando...</p>

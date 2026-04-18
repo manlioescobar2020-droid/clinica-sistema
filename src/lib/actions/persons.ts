@@ -16,7 +16,7 @@ async function requireStaff() {
   const session = await getServerSession(authOptions)
   if (!session) throw new Error("No autorizado")
   const allowed = [RoleName.ADMIN, RoleName.SECRETARY]
-  if (!allowed.includes(session.user.role as RoleName)) {
+  if (!(allowed as RoleName[]).includes(session.user.role)) {
     throw new Error("No autorizado")
   }
   return session

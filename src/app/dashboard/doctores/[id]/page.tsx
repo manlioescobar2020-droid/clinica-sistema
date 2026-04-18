@@ -44,8 +44,8 @@ export default function EditarDoctorPage() {
       selectedEspecialidades.forEach((id) => formData.append("specialtyIds", id))
       await updateDoctor(id, formData)
       router.push("/dashboard/doctores")
-    } catch (err: any) {
-      setError(err.message || "Error al actualizar")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al actualizar")
       setLoading(false)
     }
   }
@@ -55,8 +55,8 @@ export default function EditarDoctorPage() {
     try {
       await deleteDoctor(id)
       router.push("/dashboard/doctores")
-    } catch (err: any) {
-      setError(err.message || "Error al eliminar")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al eliminar")
     }
   }
 
@@ -66,7 +66,7 @@ export default function EditarDoctorPage() {
     )
   }
 
-  if (loadingData) {
+  if (loadingData || !doctor) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-gray-500">Cargando...</p>

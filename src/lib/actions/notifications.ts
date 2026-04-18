@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
-import { NotificationType } from "@prisma/client"
+import { NotificationType, Prisma } from "@prisma/client"
 
 // ============================================================
 // OBTENER NOTIFICACIONES DEL USUARIO
@@ -83,7 +83,7 @@ export async function createNotification({
   type: NotificationType
   title: string
   message: string
-  metadata?: any
+  metadata?: Prisma.InputJsonValue
 }) {
   return prisma.notification.create({
     data: { userId, type, title, message, metadata },

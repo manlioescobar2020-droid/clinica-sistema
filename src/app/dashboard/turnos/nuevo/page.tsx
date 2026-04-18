@@ -84,8 +84,8 @@ export default function NuevoTurnoPage() {
       setShowProspecto(false)
       setDniNotFound(false)
       setError("")
-    } catch (e: any) {
-      setProspectoError(e.message ?? "Error al crear el prospecto")
+    } catch (e) {
+      setProspectoError(e instanceof Error ? e.message : "Error al crear el prospecto")
     } finally {
       setProspectoLoading(false)
     }
@@ -109,8 +109,8 @@ export default function NuevoTurnoPage() {
       formData.append("notes",      notes)
       const result = await createAppointment(formData)
       if (result.success) router.push("/dashboard/turnos")
-    } catch (e: any) {
-      setError(e.message ?? "Error al crear el turno")
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al crear el turno")
     } finally {
       setLoading(false)
     }

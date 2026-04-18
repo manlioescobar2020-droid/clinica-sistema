@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
-import { RoleName, AppointmentStatus, AuditAction, DayOfWeek, PaymentStatus } from "@prisma/client"
+import { RoleName, AppointmentStatus, AuditAction, DayOfWeek, PaymentStatus, Prisma } from "@prisma/client"
 import { notifyNewAppointment, notifyCancellation } from "@/lib/actions/notifications"
 import { createAuditLog } from "@/lib/audit"
 
@@ -118,7 +118,7 @@ export async function getAppointments(filters?: {
 }) {
   await requireSession()
 
-  const where: any = {}
+  const where: Prisma.AppointmentWhereInput = {}
 
   if (filters?.doctorId) where.doctorId = filters.doctorId
   if (filters?.status) where.status = filters.status
@@ -167,7 +167,7 @@ export async function createAppointment(formData: FormData) {
   const session = await requireSession()
   const role = session.user.role
 
-  if (![RoleName.ADMIN, RoleName.SECRETARY, RoleName.DOCTOR].includes(role as RoleName)) {
+  if (!([RoleName.ADMIN, RoleName.SECRETARY, RoleName.DOCTOR] as RoleName[]).includes(role)) {
     throw new Error("No autorizado")
   }
 
@@ -240,8 +240,8 @@ export async function updateAppointmentStatus(
 
   // Solo doctor puede marcar ATENDIDO o NO_ASISTIO
   if (
-    [AppointmentStatus.ATTENDED, AppointmentStatus.NO_SHOW].includes(status) &&
-    ![RoleName.DOCTOR, RoleName.ADMIN, RoleName.SECRETARY].includes(role as RoleName)
+    ([AppointmentStatus.ATTENDED, AppointmentStatus.NO_SHOW] as AppointmentStatus[]).includes(status) &&
+    !([RoleName.DOCTOR, RoleName.ADMIN, RoleName.SECRETARY] as RoleName[]).includes(role)
   ) {
     throw new Error("No autorizado")
   }
@@ -283,7 +283,7 @@ export async function updateAppointmentStatus(
     revalidatePath(`/dashboard/turnos/${id}`)
     return { success: true }
   } catch (error) {
-    throw new Error("No se pudo actualizar el estado del turno.")
+    throw new Error("No se pudo actualizar el estado del turno.", { cause: error })
   }
 }
 
@@ -340,7 +340,7 @@ export async function registerManualPayment(
   const session = await requireSession()
   const role = session.user.role
 
-  if (![RoleName.ADMIN, RoleName.SECRETARY].includes(role as RoleName)) {
+  if (!([RoleName.ADMIN, RoleName.SECRETARY] as RoleName[]).includes(role)) {
     throw new Error("No autorizado")
   }
 
@@ -397,7 +397,7 @@ export async function registerRefund(appointmentId: string, reason?: string) {
   const session = await requireSession()
   const role = session.user.role
 
-  if (![RoleName.ADMIN, RoleName.SECRETARY].includes(role as RoleName)) {
+  if (!([RoleName.ADMIN, RoleName.SECRETARY] as RoleName[]).includes(role)) {
     throw new Error("No autorizado")
   }
 
@@ -442,7 +442,7 @@ export async function createAgendaBlock(doctorId: string, formData: FormData) {
   const session = await requireSession()
   const role = session.user.role
 
-  if (![RoleName.ADMIN, RoleName.SECRETARY, RoleName.DOCTOR].includes(role as RoleName)) {
+  if (!([RoleName.ADMIN, RoleName.SECRETARY, RoleName.DOCTOR] as RoleName[]).includes(role)) {
     throw new Error("No autorizado")
   }
 
@@ -483,7 +483,7 @@ export async function createAgendaBlock(doctorId: string, formData: FormData) {
     })
 
     // Cancelar turnos que caigan en ese bloqueo
-    const whereAppointments: any = {
+    const whereAppointments: Prisma.AppointmentWhereInput = {
       doctorId,
       startTime: { gte: startOfDay, lte: endOfDay },
       status: { notIn: ["CANCELLED_PATIENT", "CANCELLED_CLINIC"] },

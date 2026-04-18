@@ -9,7 +9,9 @@
       "Bash(rmdir D:/clinica-sistema/src/app/api/dev/crear-paciente)",
       "Bash(rmdir D:/clinica-sistema/src/app/api/dev)",
       "Bash(xargs ls *)",
-      "Read(//d/clinica-sistema/src/lib/actions/**)"
+      "Read(//d/clinica-sistema/src/lib/actions/**)",
+      "Bash(npm run *)",
+      "Bash(xargs sed *)"
     ]
   }
 }

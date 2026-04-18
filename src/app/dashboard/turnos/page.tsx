@@ -1,6 +1,4 @@
 import type { Metadata } from "next"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
 import { getAppointments } from "@/lib/actions/appointments"
 import { getDoctors } from "@/lib/actions/doctors"
 import { AppointmentStatus } from "@prisma/client"
@@ -15,7 +13,6 @@ export default async function TurnosPage({
 }: {
   searchParams: { date?: string; doctorId?: string; status?: string }
 }) {
-  const session = await getServerSession(authOptions)
   const today = searchParams.date ?? new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
 
   const [appointments, doctors] = await Promise.all([

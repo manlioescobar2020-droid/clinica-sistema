@@ -28,8 +28,8 @@ export default function NuevoDoctorPage() {
       selectedEspecialidades.forEach((id) => formData.append("specialtyIds", id))
       await createDoctor(formData)
       router.push("/dashboard/doctores")
-    } catch (err: any) {
-      setError(err.message || "Error al crear el doctor")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al crear el doctor")
       setLoading(false)
     }
   }

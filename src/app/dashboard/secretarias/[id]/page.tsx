@@ -49,8 +49,8 @@ export default function EditarSecretariaPage() {
       selectedDoctores.forEach((id) => formData.append("doctorIds", id))
       await updateSecretary(id, formData)
       router.push("/dashboard/secretarias")
-    } catch (err: any) {
-      setError(err.message || "Error al actualizar")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al actualizar")
       setLoading(false)
     }
   }
@@ -60,8 +60,8 @@ export default function EditarSecretariaPage() {
     try {
       await deleteSecretary(id)
       router.push("/dashboard/secretarias")
-    } catch (err: any) {
-      setError(err.message || "Error al eliminar")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al eliminar")
     }
   }
 
@@ -71,7 +71,7 @@ export default function EditarSecretariaPage() {
     )
   }
 
-  if (loadingData) {
+  if (loadingData || !secretary) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-gray-500">Cargando...</p>

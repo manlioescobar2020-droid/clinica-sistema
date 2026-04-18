@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
-import { RoleName, AppointmentStatus } from "@prisma/client"
+import { RoleName, AppointmentStatus, Prisma } from "@prisma/client"
 import Link from "next/link"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
@@ -31,7 +31,7 @@ async function getDashboardData(userId: string, role: RoleName) {
     doctorIds = doctor ? [doctor.id] : []
   }
 
-  const whereBase: any = {
+  const whereBase: Prisma.AppointmentWhereInput = {
     startTime: { gte: startOfDay, lte: endOfDay },
   }
   if (doctorIds !== undefined) {
@@ -41,7 +41,7 @@ async function getDashboardData(userId: string, role: RoleName) {
   // Próximos 7 días (mañana → +7 días), excluyendo cancelados
   const tomorrow = new Date(endOfDay.getTime() + 1)
   const in7Days  = new Date(startOfDay.getTime() + 8 * 86_400_000 - 1)
-  const whereUpcoming: any = {
+  const whereUpcoming: Prisma.AppointmentWhereInput = {
     startTime: { gte: tomorrow, lte: in7Days },
     status: { notIn: ["CANCELLED_PATIENT", "CANCELLED_CLINIC"] },
   }

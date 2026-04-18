@@ -65,8 +65,8 @@ export default async function DashboardLayout({
   const session = await getServerSession(authOptions)
   if (!session) redirect("/login")
 
-  const role = session.user.role as RoleName
-  const visibleItems = navItems.filter((item) => item.roles.includes(role))
+  const role = session.user.role
+  const visibleItems = navItems.filter((item) => (item.roles as RoleName[]).includes(role))
 
   const [unreadCount, notifications] = await Promise.all([
     getUnreadCount(),

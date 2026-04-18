@@ -1,12 +1,11 @@
 import type { Metadata } from "next"
-import { getDoctors, getSpecialties } from "@/lib/actions/doctors"
+import { getDoctors } from "@/lib/actions/doctors"
 import Link from "next/link"
 
 export const metadata: Metadata = { title: "Doctores" }
 
 export default async function DoctoresPage() {
   const doctores = await getDoctors()
-  const especialidades = await getSpecialties()
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">

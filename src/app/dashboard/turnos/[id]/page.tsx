@@ -46,9 +46,9 @@ export default async function TurnoDetallePage({
   const isPaid = ["PAID_CASH", "PAID_MP", "PAID_TRANSFER", "PAID_CARD"].includes(appt.payment?.status ?? "")
   const isRefunded = appt.payment?.status === "REFUNDED"
 
-  const canMarkAttended = [RoleName.ADMIN, RoleName.DOCTOR, RoleName.SECRETARY].includes(role)
-  const canCancel = [RoleName.ADMIN, RoleName.SECRETARY].includes(role)
-  const canRegisterPayment = [RoleName.ADMIN, RoleName.SECRETARY].includes(role)
+  const canMarkAttended = ([RoleName.ADMIN, RoleName.DOCTOR, RoleName.SECRETARY] as RoleName[]).includes(role)
+  const canCancel = ([RoleName.ADMIN, RoleName.SECRETARY] as RoleName[]).includes(role)
+  const canRegisterPayment = ([RoleName.ADMIN, RoleName.SECRETARY] as RoleName[]).includes(role)
 
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">

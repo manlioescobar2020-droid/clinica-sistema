@@ -34,7 +34,7 @@ export async function GET(
     return new NextResponse("No autorizado", { status: 401 })
   }
 
-  if (!STAFF_ROLES.includes(session.user.role as RoleName)) {
+  if (!(STAFF_ROLES as RoleName[]).includes(session.user.role)) {
     return new NextResponse("Acceso denegado", { status: 403 })
   }
 

@@ -29,8 +29,8 @@ export default function NuevaSecretariaPage() {
       selectedDoctores.forEach((id) => formData.append("doctorIds", id))
       await createSecretary(formData)
       router.push("/dashboard/secretarias")
-    } catch (err: any) {
-      setError(err.message || "Error al crear la secretaria")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al crear la secretaria")
       setLoading(false)
     }
   }

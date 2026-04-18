@@ -13,7 +13,7 @@ export default async function PortalLayout({
   if (!session) redirect("/login")
 
   // Solo pacientes y prospectos acceden al portal
-  if (![RoleName.PATIENT, RoleName.PROSPECT].includes(session.user.role as RoleName)) {
+  if (!([RoleName.PATIENT, RoleName.PROSPECT] as RoleName[]).includes(session.user.role)) {
     redirect("/dashboard")
   }
 

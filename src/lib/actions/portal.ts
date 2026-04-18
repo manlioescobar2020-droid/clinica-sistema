@@ -13,7 +13,7 @@ import { RoleName } from "@prisma/client"
 async function requirePatient() {
   const session = await getServerSession(authOptions)
   if (!session) throw new Error("No autorizado")
-  if (![RoleName.PATIENT, RoleName.PROSPECT].includes(session.user.role as RoleName)) {
+  if (!([RoleName.PATIENT, RoleName.PROSPECT] as RoleName[]).includes(session.user.role)) {
     throw new Error("No autorizado")
   }
   return session

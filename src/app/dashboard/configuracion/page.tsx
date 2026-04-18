@@ -54,8 +54,8 @@ export default function ConfiguracionPage() {
       const formData = new FormData(e.currentTarget)
       await updateClinicConfig(formData)
       setSuccess(true)
-    } catch (err: any) {
-      setError(err.message || "Error al guardar la configuración")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al guardar la configuración")
     } finally {
       setLoading(false)
     }

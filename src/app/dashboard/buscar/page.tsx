@@ -89,7 +89,7 @@ export default async function BuscarPage({
       {/* Encabezado */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">
-          Resultados para <span className="text-blue-600">"{q}"</span>
+          Resultados para <span className="text-blue-600">&ldquo;{q}&rdquo;</span>
         </h1>
         <p className="text-sm text-gray-500 mt-1">
           {totalResults === 0
