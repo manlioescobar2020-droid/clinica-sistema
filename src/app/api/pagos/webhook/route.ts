@@ -6,6 +6,9 @@ const mpClient = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN!,
 })
 
+// Siempre 200 — MP deja de reintentar solo con 200
+const ok = () => NextResponse.json({ received: true }, { status: 200 })
+
 // MP verifica el endpoint con GET antes de enviar notificaciones
 export async function GET() {
   return NextResponse.json({ ok: true })
@@ -17,48 +20,60 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ error: "Body inválido" }, { status: 400 })
+    // Body inválido: devolver 200 igual para que MP no reintente
+    return ok()
   }
 
   // Solo procesar notificaciones de tipo "payment"
-  if (body.type !== "payment" || !body.data) {
-    return NextResponse.json({ received: true })
-  }
+  if (body.type !== "payment" || !body.data) return ok()
 
   const paymentId = (body.data as Record<string, unknown>)?.id
-  if (!paymentId) return NextResponse.json({ received: true })
+  if (!paymentId) return ok()
 
   try {
     const mpPayment = new Payment(mpClient)
     const paymentData = await mpPayment.get({ id: String(paymentId) })
 
-    if (paymentData.status !== "approved") {
-      return NextResponse.json({ received: true })
-    }
+    const mpStatus = paymentData.status
+
+    // Solo actuar sobre estados finales: approved y rejected
+    if (mpStatus !== "approved" && mpStatus !== "rejected") return ok()
 
     // MP convierte camelCase a snake_case en metadata
-    const appointmentId =
-      (paymentData.metadata as Record<string, string> | undefined)?.appointment_id
+    const appointmentId = (
+      paymentData.metadata as Record<string, string> | undefined
+    )?.appointment_id
 
     if (!appointmentId) {
-      console.error("Webhook MP: appointment_id no encontrado en metadata", paymentData.metadata)
-      return NextResponse.json({ received: true })
+      console.error("[webhook-mp] appointment_id ausente en metadata", paymentData.metadata)
+      return ok()
     }
 
-    await prisma.payment.update({
-      where: { appointmentId },
-      data: {
-        status: "PAID_MP",
-        mpPaymentId: String(paymentId),
-        mpRawWebhook: body as Parameters<typeof prisma.payment.update>[0]["data"]["mpRawWebhook"],
-        amount: paymentData.transaction_amount ?? undefined,
-      },
-    })
+    if (mpStatus === "approved") {
+      await prisma.payment.update({
+        where: { appointmentId },
+        data: {
+          status: "PAID_MP",
+          mpPaymentId: String(paymentId),
+          amount: paymentData.transaction_amount ?? undefined,
+          mpRawWebhook: body as Parameters<typeof prisma.payment.update>[0]["data"]["mpRawWebhook"],
+        },
+      })
+    } else {
+      // rejected: revertir a NO_PAYMENT para que el turno pueda volver a intentar
+      await prisma.payment.update({
+        where: { appointmentId },
+        data: {
+          status: "NO_PAYMENT",
+          mpPaymentId: String(paymentId),
+          mpRawWebhook: body as Parameters<typeof prisma.payment.update>[0]["data"]["mpRawWebhook"],
+        },
+      })
+    }
   } catch (error) {
-    console.error("Webhook MP error:", error)
+    console.error("[webhook-mp] error:", error)
     // Devolver 200 para que MP no reintente indefinidamente
-    return NextResponse.json({ received: true })
   }
 
-  return NextResponse.json({ received: true })
+  return ok()
 }
