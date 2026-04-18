@@ -7,6 +7,7 @@ import Link from "next/link"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { RoleName, AppointmentStatus } from "@prisma/client"
+import { MercadoPagoButton } from "@/components/MercadoPagoButton"
 
 export const metadata: Metadata = { title: "Detalle de Turno" }
 
@@ -195,10 +196,21 @@ export default async function TurnoDetallePage({
         </div>
       )}
 
+      {/* Pagar con Mercado Pago */}
+      {canRegisterPayment && !isPaid && !isRefunded && !isCancelled && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+          <h2 className="text-sm font-semibold text-gray-700">💳 Pagar con Mercado Pago</h2>
+          <MercadoPagoButton
+            appointmentId={appt.id}
+            defaultAmount={Number(appt.payment?.amount ?? 0)}
+          />
+        </div>
+      )}
+
       {/* Registrar pago manual */}
       {canRegisterPayment && !isPaid && !isRefunded && !isCancelled && (
         <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-          <h2 className="text-sm font-semibold text-gray-700">💰 Registrar pago</h2>
+          <h2 className="text-sm font-semibold text-gray-700">💰 Registrar pago manual</h2>
           <form action={async (formData: FormData) => {
             "use server"
             await registerManualPayment(appt.id, formData)
