@@ -74,7 +74,8 @@ export async function POST(req: NextRequest) {
     payer: {
       name: appointment.person.firstName,
       surname: appointment.person.lastName,
-      ...(appointment.person.email ? { email: appointment.person.email } : {}),
+      // email es requerido por la API de MP Argentina
+      email: appointment.person.email ?? "pagador@clinica.com",
     },
     back_urls: { success: returnUrl, failure: returnUrl, pending: returnUrl },
     auto_return: "approved",
@@ -82,7 +83,7 @@ export async function POST(req: NextRequest) {
     notification_url: `${baseUrl}/api/pagos/webhook`,
   }
 
-  let mpData: { id?: string; init_point?: string; sandbox_init_point?: string; message?: string }
+  let mpData: { id?: string; init_point?: string; sandbox_init_point?: string; message?: string; error?: string; cause?: unknown }
   try {
     const mpRes = await fetch("https://api.mercadopago.com/checkout/preferences", {
       method: "POST",
@@ -97,7 +98,13 @@ export async function POST(req: NextRequest) {
 
     if (!mpRes.ok) {
       return NextResponse.json(
-        { error: `Mercado Pago rechazó la solicitud: ${mpData.message ?? mpRes.status}` },
+        {
+          error: `Mercado Pago rechazó la solicitud`,
+          mp_status: mpRes.status,
+          mp_message: mpData.message,
+          mp_error: mpData.error,
+          mp_cause: mpData.cause,
+        },
         { status: 502 }
       )
     }
