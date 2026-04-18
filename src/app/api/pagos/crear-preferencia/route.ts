@@ -5,6 +5,17 @@ import { prisma } from "@/lib/prisma"
 import { MercadoPagoConfig, Preference } from "mercadopago"
 
 export async function POST(req: NextRequest) {
+  try {
+    return await _handler(req)
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e)
+    const stack = e instanceof Error ? e.stack : undefined
+    console.error("[crear-preferencia] ERROR NO CAPTURADO:", msg, stack)
+    return NextResponse.json({ error: msg, stack }, { status: 500 })
+  }
+}
+
+async function _handler(req: NextRequest) {
   console.log("[crear-preferencia] inicio")
 
   // ── 1. Auth ────────────────────────────────────────────────────────────────
