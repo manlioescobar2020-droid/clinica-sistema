@@ -29,16 +29,28 @@ export function MercadoPagoButton({ appointmentId, defaultAmount = 0 }: MercadoP
         body: JSON.stringify({ appointmentId, amount: parsedAmount }),
       })
 
-      const data = await res.json()
+      // Intentar parsear JSON incluso en errores para obtener el mensaje exacto
+      let data: { error?: string; checkoutUrl?: string } = {}
+      try {
+        data = await res.json()
+      } catch {
+        setError(`Error del servidor (status ${res.status}). Revisá los logs de Vercel.`)
+        return
+      }
 
       if (!res.ok) {
-        setError(data.error ?? "Error al crear preferencia de pago")
+        setError(data.error ?? `Error ${res.status} al crear preferencia de pago`)
+        return
+      }
+
+      if (!data.checkoutUrl) {
+        setError("La API no devolvió una URL de pago. Revisá los logs de Vercel.")
         return
       }
 
       window.location.href = data.checkoutUrl
-    } catch {
-      setError("Error de conexión. Intentá nuevamente.")
+    } catch (e) {
+      setError(`Error de red: ${e instanceof Error ? e.message : "sin conexión"}`)
     } finally {
       setLoading(false)
     }

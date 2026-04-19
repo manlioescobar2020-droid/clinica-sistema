@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { getClinicConfig, updateClinicConfig } from "@/lib/actions/clinic"
+import { changePassword } from "@/lib/actions/auth"
 
 type ClinicConfig = Awaited<ReturnType<typeof getClinicConfig>>
 
@@ -37,12 +38,34 @@ export default function ConfiguracionPage() {
   const [success, setSuccess] = useState(false)
   const [config, setConfig] = useState<ClinicConfig>(null)
 
+  const [pwLoading, setPwLoading] = useState(false)
+  const [pwError, setPwError] = useState("")
+  const [pwSuccess, setPwSuccess] = useState(false)
+
   useEffect(() => {
     getClinicConfig().then((data) => {
       setConfig(data)
       setLoadingData(false)
     })
   }, [])
+
+  async function handlePasswordSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setPwLoading(true)
+    setPwError("")
+    setPwSuccess(false)
+
+    try {
+      const formData = new FormData(e.currentTarget)
+      await changePassword(formData)
+      setPwSuccess(true)
+      ;(e.target as HTMLFormElement).reset()
+    } catch (err) {
+      setPwError(err instanceof Error ? err.message : "Error al cambiar la contraseña")
+    } finally {
+      setPwLoading(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -185,6 +208,71 @@ export default function ConfiguracionPage() {
             {loading ? "Guardando..." : "Guardar configuración"}
           </button>
         </form>
+
+        {/* Cambiar contraseña */}
+        <form onSubmit={handlePasswordSubmit} className="bg-white rounded-2xl shadow-sm p-8 space-y-6 mt-8">
+          <div>
+            <h2 className="font-semibold text-gray-700 mb-1">Cambiar contraseña</h2>
+            <p className="text-sm text-gray-500">Actualizá tu contraseña de acceso</p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contraseña actual *
+              </label>
+              <input
+                name="currentPassword"
+                type="password"
+                required
+                autoComplete="current-password"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nueva contraseña *
+              </label>
+              <input
+                name="newPassword"
+                type="password"
+                required
+                autoComplete="new-password"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Confirmar nueva contraseña *
+              </label>
+              <input
+                name="confirmPassword"
+                type="password"
+                required
+                autoComplete="new-password"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          {pwError && (
+            <p className="text-sm text-red-600 bg-red-50 px-4 py-2 rounded-lg">{pwError}</p>
+          )}
+          {pwSuccess && (
+            <p className="text-sm text-green-700 bg-green-50 px-4 py-2 rounded-lg">
+              Contraseña actualizada correctamente.
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={pwLoading}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition disabled:opacity-50"
+          >
+            {pwLoading ? "Actualizando..." : "Cambiar contraseña"}
+          </button>
+        </form>
+
       </div>
     </div>
   )
