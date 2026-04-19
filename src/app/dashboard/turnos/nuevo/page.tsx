@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation"
 import { getDoctors } from "@/lib/actions/doctors"
 import { getAvailableSlots, createAppointment } from "@/lib/actions/appointments"
 import { createProspect } from "@/lib/actions/persons"
+import { getMyDoctorInfo } from "@/lib/actions/auth"
+import { RoleName } from "@prisma/client"
 
 type Doctor = Awaited<ReturnType<typeof getDoctors>>[0]
 type Slot = { time: string; scheduleId: string; duration: number }
@@ -17,6 +19,7 @@ export default function NuevoTurnoPage() {
   const [loading, setLoading]         = useState(false)
   const [loadingSlots, setLoadingSlots] = useState(false)
   const [error, setError]             = useState("")
+  const [myRole, setMyRole]           = useState<RoleName | null>(null)
 
   // Turno
   const [doctorId, setDoctorId]         = useState("")
@@ -35,7 +38,15 @@ export default function NuevoTurnoPage() {
     firstName: "", lastName: "", phone: "", email: "",
   })
 
-  useEffect(() => { getDoctors().then(setDoctors) }, [])
+  useEffect(() => {
+    Promise.all([getDoctors(), getMyDoctorInfo()]).then(([docs, info]) => {
+      setDoctors(docs)
+      setMyRole(info.role)
+      if (info.role === RoleName.DOCTOR && info.doctorId) {
+        setDoctorId(info.doctorId)
+      }
+    })
+  }, [])
 
   useEffect(() => {
     if (!doctorId || !date) return
@@ -250,16 +261,22 @@ export default function NuevoTurnoPage() {
         {/* Doctor */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">Doctor</label>
-          <select
-            value={doctorId}
-            onChange={(e) => setDoctorId(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Seleccioná un doctor</option>
-            {doctors.map((d) => (
-              <option key={d.id} value={d.id}>{d.user.name}</option>
-            ))}
-          </select>
+          {myRole === RoleName.DOCTOR ? (
+            <p className="border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-800">
+              {doctors.find((d) => d.id === doctorId)?.user.name ?? "Cargando..."}
+            </p>
+          ) : (
+            <select
+              value={doctorId}
+              onChange={(e) => setDoctorId(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Seleccioná un doctor</option>
+              {doctors.map((d) => (
+                <option key={d.id} value={d.id}>{d.user.name}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* Fecha */}

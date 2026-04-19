@@ -49,6 +49,20 @@ export async function getMyRole(): Promise<RoleName | null> {
   return (session?.user?.role as RoleName) ?? null
 }
 
+export async function getMyDoctorInfo(): Promise<{ role: RoleName | null; doctorId: string | null }> {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return { role: null, doctorId: null }
+
+  const role = session.user.role as RoleName
+  if (role !== RoleName.DOCTOR) return { role, doctorId: null }
+
+  const doctor = await prisma.doctor.findFirst({
+    where: { userId: session.user.id, deletedAt: null },
+    select: { id: true },
+  })
+  return { role, doctorId: doctor?.id ?? null }
+}
+
 export async function resetPassword(userId: string, newPassword: string): Promise<ActionResult> {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return { success: false, error: "No autorizado" }
