@@ -4,10 +4,17 @@ import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { getSecretaryById, updateSecretary, deleteSecretary } from "@/lib/actions/secretaries"
 import { getDoctors } from "@/lib/actions/doctors"
+import { getMyRole, resetPassword } from "@/lib/actions/auth"
+import { RoleName } from "@prisma/client"
 
 type Secretary = Awaited<ReturnType<typeof getSecretaryById>>
 type Doctors = Awaited<ReturnType<typeof getDoctors>>
 import Link from "next/link"
+
+function generatePassword(): string {
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"
+  return Array.from({ length: 10 }, () => chars[Math.floor(Math.random() * chars.length)]).join("")
+}
 
 export default function EditarSecretariaPage() {
   const router = useRouter()
@@ -20,12 +27,20 @@ export default function EditarSecretariaPage() {
   const [doctores, setDoctores] = useState<Doctors>([])
   const [selectedDoctores, setSelectedDoctores] = useState<string[]>([])
   const [secretary, setSecretary] = useState<Secretary>(null)
+  const [myRole, setMyRole] = useState<RoleName | null>(null)
+
+  const [newPassword, setNewPassword] = useState("")
+  const [pwLoading, setPwLoading] = useState(false)
+  const [pwError, setPwError] = useState("")
+  const [pwSuccess, setPwSuccess] = useState(false)
+  const [lastResetPw, setLastResetPw] = useState("")
 
   useEffect(() => {
     async function load() {
-      const [sec, docs] = await Promise.all([
+      const [sec, docs, role] = await Promise.all([
         getSecretaryById(id),
         getDoctors(),
+        getMyRole(),
       ])
       if (!sec) {
         router.push("/dashboard/secretarias")
@@ -34,10 +49,26 @@ export default function EditarSecretariaPage() {
       setSecretary(sec)
       setSelectedDoctores(sec.secretaryDoctors.map((sd) => sd.doctorId))
       setDoctores(docs)
+      setMyRole(role)
       setLoadingData(false)
     }
     load()
   }, [id])
+
+  async function handleResetPassword() {
+    setPwLoading(true)
+    setPwError("")
+    setPwSuccess(false)
+    const result = await resetPassword(secretary!.user.id, newPassword)
+    if (result.success) {
+      setLastResetPw(newPassword)
+      setPwSuccess(true)
+      setNewPassword("")
+    } else {
+      setPwError(result.error)
+    }
+    setPwLoading(false)
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -174,6 +205,48 @@ export default function EditarSecretariaPage() {
             {loading ? "Guardando..." : "Guardar cambios"}
           </button>
         </form>
+
+        {myRole === RoleName.ADMIN && (
+          <div className="bg-white rounded-2xl shadow-sm p-8 space-y-6 mt-8">
+            <div>
+              <h2 className="font-semibold text-gray-700 mb-1">Resetear contraseña</h2>
+              <p className="text-sm text-gray-500">Establecé una nueva contraseña temporal para este usuario</p>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Nueva contraseña temporal"
+                className="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              />
+              <button
+                type="button"
+                onClick={() => setNewPassword(generatePassword())}
+                className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition"
+              >
+                Generar
+              </button>
+            </div>
+            {pwError && (
+              <p className="text-sm text-red-600 bg-red-50 px-4 py-2 rounded-lg">{pwError}</p>
+            )}
+            {pwSuccess && (
+              <p className="text-sm text-green-700 bg-green-50 px-4 py-2 rounded-lg">
+                Contraseña reseteada. Comunicale al usuario:{" "}
+                <strong className="font-mono">{lastResetPw}</strong>
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={handleResetPassword}
+              disabled={pwLoading || !newPassword.trim()}
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium py-2.5 rounded-lg transition disabled:opacity-50"
+            >
+              {pwLoading ? "Reseteando..." : "Resetear contraseña"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
