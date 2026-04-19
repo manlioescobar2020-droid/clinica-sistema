@@ -57,11 +57,15 @@ export default function ConfiguracionPage() {
 
     try {
       const formData = new FormData(e.currentTarget)
-      await changePassword(formData)
-      setPwSuccess(true)
-      ;(e.target as HTMLFormElement).reset()
-    } catch (err) {
-      setPwError(err instanceof Error ? err.message : "Error al cambiar la contraseña")
+      const result = await changePassword(formData)
+      if (result.success) {
+        setPwSuccess(true)
+        ;(e.target as HTMLFormElement).reset()
+      } else {
+        setPwError(result.error)
+      }
+    } catch {
+      setPwError("Error inesperado. Intente nuevamente.")
     } finally {
       setPwLoading(false)
     }
