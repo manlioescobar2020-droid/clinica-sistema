@@ -69,9 +69,35 @@ export default async function ReportesPage({
   const desdeDate = new Date(`${desde}T00:00:00.000Z`)
   const hastaDate = new Date(`${hasta}T23:59:59.999Z`)
 
+  // Si es secretaria, resolver sus doctores asignados (igual que en dashboard/page.tsx)
+  let allowedDoctorIds: string[] | undefined = undefined
+  if (role === RoleName.SECRETARY) {
+    const secretary = await prisma.secretary.findFirst({
+      where: { user: { id: session.user.id }, deletedAt: null },
+      include: { secretaryDoctors: true },
+    })
+    allowedDoctorIds = secretary?.secretaryDoctors.map((sd) => sd.doctorId) ?? []
+  }
+
+  // El doctorId del filtro es válido solo si está dentro del conjunto permitido
+  const effectiveDoctorId =
+    doctorId && (allowedDoctorIds === undefined || allowedDoctorIds.includes(doctorId))
+      ? doctorId
+      : undefined
+
+  // Filtro de doctor para la query de pagos
+  const doctorFilter = effectiveDoctorId
+    ? { doctorId: effectiveDoctorId }
+    : allowedDoctorIds !== undefined
+      ? { doctorId: { in: allowedDoctorIds } }
+      : {}
+
   const [doctores, pagos] = await Promise.all([
     prisma.doctor.findMany({
-      where: { deletedAt: null },
+      where: {
+        deletedAt: null,
+        ...(allowedDoctorIds !== undefined ? { id: { in: allowedDoctorIds } } : {}),
+      },
       include: { user: { select: { name: true } } },
       orderBy: { user: { name: "asc" } },
     }),
@@ -80,7 +106,7 @@ export default async function ReportesPage({
         status: { in: PAID_STATUSES },
         appointment: {
           startTime: { gte: desdeDate, lte: hastaDate },
-          ...(doctorId ? { doctorId } : {}),
+          ...doctorFilter,
         },
       },
       include: {
