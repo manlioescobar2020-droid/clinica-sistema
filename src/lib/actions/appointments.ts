@@ -152,7 +152,12 @@ export async function getAppointmentById(id: string) {
     where: { id },
     include: {
       person: true,
-      doctor: { include: { user: { select: { name: true } } } },
+      doctor: {
+        include: {
+          user: { select: { name: true } },
+          specialties: { include: { specialty: true } },
+        },
+      },
       schedule: true,
       payment: true,
     },

@@ -17,7 +17,8 @@
       "Bash(npx tsc *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(vercel logs *)"
+      "Bash(vercel logs *)",
+      "Bash(npx tsx *)"
     ]
   }
 }

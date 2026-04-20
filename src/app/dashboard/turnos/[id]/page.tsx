@@ -24,18 +24,18 @@ export default async function TurnoDetallePage({
   if (!appt) notFound()
 
   const statusLabels: Record<string, { label: string; color: string }> = {
-    RESERVED:          { label: "Reservado",        color: "bg-yellow-100 text-yellow-800" },
-    CONFIRMED:         { label: "Confirmado",        color: "bg-blue-100 text-blue-800" },
+    RESERVED:          { label: "Reservado",        color: "bg-blue-100 text-blue-800" },
+    CONFIRMED:         { label: "Confirmado",        color: "bg-indigo-100 text-indigo-900" },
     ATTENDED:          { label: "Atendido",          color: "bg-green-100 text-green-800" },
     CANCELLED_PATIENT: { label: "Cancel. Paciente",  color: "bg-red-100 text-red-800" },
-    CANCELLED_CLINIC:  { label: "Cancel. Clínica",   color: "bg-orange-100 text-orange-800" },
-    NO_SHOW:           { label: "No asistió",        color: "bg-gray-100 text-gray-800" },
+    CANCELLED_CLINIC:  { label: "Cancel. Clínica",   color: "bg-red-100 text-red-800" },
+    NO_SHOW:           { label: "No asistió",        color: "bg-orange-100 text-orange-800" },
   }
 
   const paymentLabels: Record<string, { label: string; color: string }> = {
     NO_PAYMENT:      { label: "Sin pago",       color: "bg-gray-100 text-gray-600" },
     PENDING:         { label: "Pendiente",      color: "bg-yellow-100 text-yellow-700" },
-    PAID_MP:         { label: "Mercado Pago",   color: "bg-blue-100 text-blue-700" },
+    PAID_MP:         { label: "Mercado Pago",   color: "bg-green-100 text-green-700" },
     PAID_CASH:       { label: "Efectivo",       color: "bg-green-100 text-green-700" },
     PAID_TRANSFER:   { label: "Transferencia",  color: "bg-green-100 text-green-700" },
     PAID_CARD:       { label: "Tarjeta",        color: "bg-green-100 text-green-700" },
@@ -91,6 +91,9 @@ export default async function TurnoDetallePage({
           <div className="text-right">
             <p className="font-medium text-gray-900">{appt.person.firstName} {appt.person.lastName}</p>
             <p className="text-xs text-gray-500">DNI {appt.person.dni}</p>
+            {appt.person.email && (
+              <p className="text-xs text-gray-500">{appt.person.email}</p>
+            )}
             {appt.person.phone && (
               <a
                 href={`https://wa.me/${appt.person.phone.replace(/\D/g, "")}`}
@@ -107,7 +110,14 @@ export default async function TurnoDetallePage({
 
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-gray-500">Doctor</span>
-          <span className="font-medium text-gray-900">{appt.doctor.user.name}</span>
+          <div className="text-right">
+            <p className="font-medium text-gray-900">{appt.doctor.user.name}</p>
+            {appt.doctor.specialties.length > 0 && (
+              <p className="text-xs text-gray-500">
+                {appt.doctor.specialties.map((ds) => ds.specialty.name).join(", ")}
+              </p>
+            )}
+          </div>
         </div>
         <hr className="border-gray-100" />
 
