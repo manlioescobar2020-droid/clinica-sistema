@@ -161,6 +161,7 @@ model Doctor {
   appointments     Appointment[]
   secretaryDoctors SecretaryDoctor[]
   medicalRecords   MedicalRecord[]
+  healthInsurances DoctorHealthInsurance[]
 
   @@index([deletedAt])
 }
@@ -206,6 +207,25 @@ model DoctorSpecialty {
   specialty Specialty @relation(fields: [specialtyId], references: [id])
 
   @@id([doctorId, specialtyId])
+}
+
+model HealthInsurance {
+  id      String @id @default(cuid())
+  name    String @unique
+
+  doctors DoctorHealthInsurance[]
+}
+
+model DoctorHealthInsurance {
+  id                String @id @default(cuid())
+  doctorId          String
+  healthInsuranceId String
+  price             Float
+
+  doctor          Doctor          @relation(fields: [doctorId], references: [id])
+  healthInsurance HealthInsurance @relation(fields: [healthInsuranceId], references: [id])
+
+  @@unique([doctorId, healthInsuranceId])
 }
 
 // ============================================================

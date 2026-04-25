@@ -155,9 +155,45 @@ export async function POST(req: NextRequest) {
       const doctor = doctores[index];
       sessions[from].doctorId = doctor.id;
       sessions[from].doctorNombre = doctor.user.name;
+
+      const coberturas = await prisma.doctorHealthInsurance.findMany({
+        where: { doctorId: doctor.id },
+        include: { healthInsurance: true },
+        orderBy: { healthInsurance: { name: "asc" } },
+      });
+
+      if (coberturas.length === 0) {
+        sessions[from].step = "esperando_fecha";
+        sessions[from].precio = null;
+        sessions[from].obraSocial = "Sin datos de cobertura";
+        await sendMessage(from, `Elegiste al Dr/a. ${doctor.user.name}.\n\n¿Para qué fecha necesitás el turno?\n\nRespondé con la fecha en formato *DD/MM/AAAA* (ej: 28/04/2026).`);
+        return NextResponse.json({ ok: true });
+      }
+
+      const lista = coberturas.map((c: any, i: number) => `${i + 1}. ${c.healthInsurance.name} — $${c.price.toLocaleString()}`).join("\n");
+      sessions[from].coberturas = coberturas;
+      sessions[from].step = "esperando_obra_social";
+
+      await sendMessage(from, `Dr/a. ${doctor.user.name} trabaja con:\n\n${lista}\n\nRespondé con el *número* de tu obra social o cobertura.`);
+      return NextResponse.json({ ok: true });
+    }
+
+    // PASO 5b — Obra social
+    if (session.step === "esperando_obra_social") {
+      const index = parseInt(bodyLower) - 1;
+      const coberturas = session.coberturas;
+
+      if (isNaN(index) || index < 0 || index >= coberturas.length) {
+        await sendMessage(from, "Por favor respondé con el número de tu obra social.");
+        return NextResponse.json({ ok: true });
+      }
+
+      const cobertura = coberturas[index];
+      sessions[from].precio = cobertura.price;
+      sessions[from].obraSocial = cobertura.healthInsurance.name;
       sessions[from].step = "esperando_fecha";
 
-      await sendMessage(from, `Elegiste al Dr/a. ${doctor.user.name}.\n\n¿Para qué fecha necesitás el turno?\n\nRespondé con la fecha en formato *DD/MM/AAAA* (ej: 28/04/2026).`);
+      await sendMessage(from, `Cobertura: *${cobertura.healthInsurance.name}* — Valor de consulta: *$${cobertura.price.toLocaleString()}*\n\n¿Para qué fecha necesitás el turno?\n\nRespondé con la fecha en formato *DD/MM/AAAA* (ej: 28/04/2026).`);
       return NextResponse.json({ ok: true });
     }
 
@@ -327,8 +363,10 @@ export async function POST(req: NextRequest) {
         `👤 Paciente: ${session.nombre}\n` +
         `🩺 Doctor/a: ${session.doctorNombre}\n` +
         `📅 Fecha: ${fechaStr}\n` +
-        `🕐 Horario: ${slotElegido.hora} hs\n\n` +
-        `📋 *Términos y condiciones:*\n` +
+        `🕐 Horario: ${slotElegido.hora} hs\n` +
+        `🏥 Cobertura: ${session.obraSocial}\n` +
+        (session.precio ? `💰 Valor: $${session.precio.toLocaleString()}\n` : "") +
+        `\n📋 *Términos y condiciones:*\n` +
         `• Podés cancelar tu turno hasta *24 horas antes* sin cargo.\n` +
         `• Si no asistís sin cancelar, se registrará como *ausencia*.\n` +
         `• El pago anticipado vía Mercado Pago *confirma* tu turno y tiene prioridad.\n` +

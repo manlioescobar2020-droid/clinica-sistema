@@ -179,6 +179,22 @@ async function main() {
     console.log("✅ Configuración de clínica creada")
   }
 
+  // ============================================================
+  // OBRAS SOCIALES
+  // ============================================================
+  const obrasSociales = ["Particular", "OSDE", "Swiss Medical", "IOMA", "Sancor Salud"]
+
+  await Promise.all(
+    obrasSociales.map((name) =>
+      prisma.healthInsurance.upsert({
+        where: { name },
+        update: {},
+        create: { name },
+      })
+    )
+  )
+  console.log("✅ Obras sociales creadas:", obrasSociales.join(", "))
+
   console.log("🎉 Seed completado exitosamente")
 }
 
